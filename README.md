@@ -46,7 +46,3 @@ Which outputs:
 - more
 - more
 ```
-
-	// https://github.com/python/cpython/blob/main/Lib/difflib.py
-	// https://github.com/pmezard/go-difflib/blob/master/difflib/difflib.go
-
