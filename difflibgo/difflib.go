@@ -705,8 +705,7 @@ func (d *Differ) Compare(seqA, seqB []string) []string {
 			c := d.dump(" ", seqA, opCode.SeqALo, opCode.SeqAHi)
 			finalOut = append(finalOut, c...)
 		default:
-			// heckin panic
-			panic("whoaaaaa wtf")
+			panic("unknown opcode, this shouldn't happen...")
 		}
 	}
 
