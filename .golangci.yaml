@@ -1,16 +1,7 @@
 linters-settings:
-  depguard:
-    list-type: blacklist
-  dupl:
-    threshold: 100
   funlen:
-    lines: 100
+    lines: 150
     statements: 50
-  gci:
-    local-prefixes: github.com/golangci/golangci-lint
-  goconst:
-    min-len: 2
-    min-occurrences: 2
   gocritic:
     enabled-tags:
       - diagnostic
@@ -19,115 +10,123 @@ linters-settings:
       - performance
       - style
     disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
       - whyNoLint
-      - wrapperFunc
   gocyclo:
-    min-complexity: 15
-  goimports:
-    local-prefixes: github.com/golangci/golangci-lint
-  gomnd:
-    settings:
-      mnd:
-        # don't include the "operation" and "assign"
-        checks: argument,case,condition,return
-  govet:
-    check-shadowing: true
-    settings:
-      printf:
-        funcs:
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    min-complexity: 22
   lll:
     line-length: 100
-  misspell:
-    locale: US
-  nolintlint:
-    allow-leading-space: true # don't require machine-readable nolint directives (i.e. with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: false # don't require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+    tab-width: 4
+  stylecheck:
+    checks:
+      - "-ST1000"
+
 linters:
-  # please, do not use `enable-all`: it's deprecated and will be removed soon.
-  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
-  disable-all: true
   enable:
+    - asciicheck
     - bodyclose
-    - deadcode
-    - depguard
+    - decorder
     - dogsled
     - dupl
+    - dupword
+    - durationcheck
     - errcheck
+    - errchkjson
+    - errname
+    - errorlint
     - exhaustive
+    - exportloopref
+    - forbidigo
+    - forcetypeassert
     - funlen
+    - gocheckcompilerdirectives
+    - gochecknoglobals
     - gochecknoinits
+    - gochecksumtype
+    - gocognit
     - goconst
     - gocritic
     - gocyclo
+    - godot
+    - godox
+    - goerr113
     - gofmt
+    - gofumpt
     - goimports
     - gomnd
     - goprintffuncname
     - gosec
     - gosimple
     - govet
+    - grouper
+    - importas
     - ineffassign
+    - inamedparam
     - lll
+    - maintidx
+    - makezero
     - misspell
     - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - nlreturn
     - noctx
     - nolintlint
+    - perfsprint
+    - prealloc
+    - predeclared
+    - reassign
     - revive
-    - rowserrcheck
-    - exportloopref
     - staticcheck
-    - structcheck
     - stylecheck
+    - tenv
+    - testpackage
+    - thelper
+    - tparallel
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
+    - usestdlibvars
+    - wastedassign
     - whitespace
-    - asciicheck
-    - gochecknoglobals
-    - gocognit
-    - godot
-    - godox
-    - goerr113
-    - nestif
-    - prealloc
-    - testpackage
     - wsl
 
 issues:
-  # Excluding configuration per-path, per-linter, per-text and per-source
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  # https://github.com/golangci/golangci-lint/issues/2439#issuecomment-1002912465
+  exclude-use-default: false
   exclude-rules:
     - path: _test\.go
       linters:
         - gomnd
-    # ignoring gocognit, gocyclo, nestif for this module
-    - path: difflibgo
+        - dupl
+        - structcheck
+        - unused
+        - unparam
+        - maintidx
+        - funlen
+        - gochecknoglobals
+        - lll
+
+    - path: logging/fake.go
       linters:
-        - gocognit
-        - gocyclo
-        - nestif
+        - revive
+
+    # ignore package comments complaints in revive
+    - linters:
+        - revive
+      text: "package-comments"
 
 run:
+  go: '1.16'
   skip-dirs:
-    - private
-    - test/testdata_etc
-    - internal/cache
-    - internal/renameio
-    - internal/robustio
+    - .private
+  timeout: 5m
 
-# golangci.com configuration
-# https://github.com/golangci/golangci/wiki/Configuration
+output:
+  uniq-by-line: false
+
 service:
-  golangci-lint-version: 1.39.x # use the fixed version to not introduce new linters unexpectedly
-  prepare:
-    - echo "here I can run custom commands, but no preparation needed for this repo"
+  golangci-lint-version: 1.55.x

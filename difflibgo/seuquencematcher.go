@@ -1,59 +1,18 @@
 package difflibgo
 
 import (
-	"fmt"
 	"sort"
-	"strings"
-	"unicode"
 )
 
-const (
-	autoJunkLenHeuristic = 200
-	insertOp             = 105
-	deleteOp             = 100
-	equalOp              = 101
-	replaceOp            = 114
-)
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-
-	return b
-}
-
-func calculateRatio(matches, length int) float64 {
-	if length > 0 {
-		return 2.0 * float64(matches) / float64(length)
-	}
-
-	return 1.0
-}
-
-type Match struct {
-	A    int
-	B    int
-	Size int
-}
-
-type OpCode struct {
-	Tag    byte
-	SeqALo int
-	SeqAHi int
-	SeqBLo int
-	SeqBHi int
-}
-
-// SequenceMatcher is a port of the python standard library difflib.SequenceMatcher into go. The
+// sequenceMatcher is a port of the python standard library difflib.SequenceMatcher into go. The
 // original class is here: https://github.com/python/cpython/blob/main/Lib/difflib.py#L44. This
 // version only works to compare slices of strings, and removes the `junk` components of the python
 // implementation.
-type SequenceMatcher struct {
+type sequenceMatcher struct {
 	sequenceA      []string
 	sequenceB      []string
-	matchingBlocks []Match
-	opCodes        []OpCode
+	matchingBlocks []match
+	opCodes        []opCode
 
 	// indices of things in b that are not junk; "b2j" in difflib
 	bNonJunkIndicies map[string][]int
@@ -63,12 +22,12 @@ type SequenceMatcher struct {
 	fullBCount map[string]int
 }
 
-func (s *SequenceMatcher) setSequences(a, b []string) {
+func (s *sequenceMatcher) setSequences(a, b []string) {
 	s.setSequenceA(a)
 	s.setSequenceB(b)
 }
 
-func (s *SequenceMatcher) setSequenceA(a []string) {
+func (s *sequenceMatcher) setSequenceA(a []string) {
 	if &a == &s.sequenceA {
 		return
 	}
@@ -78,7 +37,7 @@ func (s *SequenceMatcher) setSequenceA(a []string) {
 	s.opCodes = nil
 }
 
-func (s *SequenceMatcher) setSequenceB(b []string) {
+func (s *sequenceMatcher) setSequenceB(b []string) {
 	if &b == &s.sequenceB {
 		return
 	}
@@ -91,7 +50,7 @@ func (s *SequenceMatcher) setSequenceB(b []string) {
 	s.purgeAutoJunk()
 }
 
-func (s *SequenceMatcher) purgeAutoJunkElement() {
+func (s *sequenceMatcher) purgeAutoJunkElement() {
 	s.bNonJunkIndicies = map[string][]int{}
 
 	seqB := s.sequenceB[0]
@@ -110,7 +69,7 @@ func (s *SequenceMatcher) purgeAutoJunkElement() {
 		return
 	}
 
-	ntest := n/100 + 1
+	ntest := n/oneHundred + 1
 
 	for seq, indices := range s.bNonJunkIndicies {
 		if len(indices) > ntest {
@@ -125,7 +84,7 @@ func (s *SequenceMatcher) purgeAutoJunkElement() {
 	s.bAutoJunk = autoJunk
 }
 
-func (s *SequenceMatcher) purgeAutoJunkSlice() {
+func (s *sequenceMatcher) purgeAutoJunkSlice() {
 	s.bNonJunkIndicies = map[string][]int{}
 
 	for i, seq := range s.sequenceB {
@@ -142,7 +101,7 @@ func (s *SequenceMatcher) purgeAutoJunkSlice() {
 		return
 	}
 
-	ntest := n/100 + 1
+	ntest := n/oneHundred + 1
 
 	for seq, indices := range s.bNonJunkIndicies {
 		if len(indices) > ntest {
@@ -157,7 +116,7 @@ func (s *SequenceMatcher) purgeAutoJunkSlice() {
 	s.bAutoJunk = autoJunk
 }
 
-func (s *SequenceMatcher) purgeAutoJunk() {
+func (s *sequenceMatcher) purgeAutoJunk() {
 	if len(s.sequenceB) == 1 {
 		s.purgeAutoJunkElement()
 	} else {
@@ -165,13 +124,13 @@ func (s *SequenceMatcher) purgeAutoJunk() {
 	}
 }
 
-func (s *SequenceMatcher) isBSeqJunk(seq string) bool {
+func (s *sequenceMatcher) isBSeqJunk(seq string) bool {
 	_, ok := s.bAutoJunk[seq]
 
 	return ok
 }
 
-func (s *SequenceMatcher) findLongestMatchSingleElement(seqALo, seqAHi, seqBLo, seqBHi int) Match {
+func (s *sequenceMatcher) findLongestMatchSingleElement(seqALo, seqAHi, seqBLo, seqBHi int) match {
 	besti, bestj, bestsize := seqALo, seqBLo, 0
 	j2len := map[int]int{}
 
@@ -222,10 +181,10 @@ func (s *SequenceMatcher) findLongestMatchSingleElement(seqALo, seqAHi, seqBLo, 
 		bestsize++
 	}
 
-	return Match{A: besti, B: bestj, Size: bestsize}
+	return match{A: besti, B: bestj, Size: bestsize}
 }
 
-func (s *SequenceMatcher) findLongestMatchSlice(seqALo, seqAHi, seqBLo, seqBHi int) Match {
+func (s *sequenceMatcher) findLongestMatchSlice(seqALo, seqAHi, seqBLo, seqBHi int) match {
 	besti, bestj, bestsize := seqALo, seqBLo, 0
 	j2len := map[int]int{}
 
@@ -274,10 +233,10 @@ func (s *SequenceMatcher) findLongestMatchSlice(seqALo, seqAHi, seqBLo, seqBHi i
 		bestsize++
 	}
 
-	return Match{A: besti, B: bestj, Size: bestsize}
+	return match{A: besti, B: bestj, Size: bestsize}
 }
 
-func (s *SequenceMatcher) findLongestMatch(seqALo, seqAHi, seqBLo, seqBHi int) Match {
+func (s *sequenceMatcher) findLongestMatch(seqALo, seqAHi, seqBLo, seqBHi int) match {
 	if len(s.sequenceA) == 1 && len(s.sequenceB) == 1 {
 		return s.findLongestMatchSingleElement(seqALo, seqAHi, seqBLo, seqBHi)
 	}
@@ -285,19 +244,19 @@ func (s *SequenceMatcher) findLongestMatch(seqALo, seqAHi, seqBLo, seqBHi int) M
 	return s.findLongestMatchSlice(seqALo, seqAHi, seqBLo, seqBHi)
 }
 
-func (s *SequenceMatcher) getMatchingBlocks() []Match {
+func (s *sequenceMatcher) getMatchingBlocks() []match {
 	if s.matchingBlocks != nil {
 		return s.matchingBlocks
 	}
 
-	var matchBlocks func(alo, ahi, blo, bhi int, matched []Match) []Match
+	var matchBlocks func(alo, ahi, blo, bhi int, matched []match) []match
 
-	matchBlocks = func(seqALo, seqAHi, seqBLo, seqBHi int, matched []Match) []Match {
-		match := s.findLongestMatch(seqALo, seqAHi, seqBLo, seqBHi)
-		i, j, k := match.A, match.B, match.Size
+	matchBlocks = func(seqALo, seqAHi, seqBLo, seqBHi int, matched []match) []match {
+		longestMatch := s.findLongestMatch(seqALo, seqAHi, seqBLo, seqBHi)
+		i, j, k := longestMatch.A, longestMatch.B, longestMatch.Size
 
-		if match.Size > 0 {
-			matched = append(matched, match)
+		if longestMatch.Size > 0 {
+			matched = append(matched, longestMatch)
 
 			if seqALo < i && seqBLo < j {
 				matched = matchBlocks(seqALo, i, seqBLo, j, matched)
@@ -313,7 +272,7 @@ func (s *SequenceMatcher) getMatchingBlocks() []Match {
 
 	la, lb := len(s.sequenceA), len(s.sequenceB)
 	if len(s.sequenceA) == 1 && len(s.sequenceB) == 1 {
-		la, lb = len(s.sequenceA[0]), len(s.sequenceB[0])
+		la, lb = len(s.sequenceA), len(s.sequenceB)
 	}
 
 	matched := matchBlocks(0, la, 0, lb, nil)
@@ -331,7 +290,7 @@ func (s *SequenceMatcher) getMatchingBlocks() []Match {
 		return matched[i].Size < matched[j].Size
 	})
 
-	var nonAdjacent []Match
+	var nonAdjacent []match
 
 	i1, j1, k1 := 0, 0, 0
 
@@ -341,7 +300,7 @@ func (s *SequenceMatcher) getMatchingBlocks() []Match {
 			k1 += k2
 		} else {
 			if k1 > 0 {
-				nonAdjacent = append(nonAdjacent, Match{i1, j1, k1})
+				nonAdjacent = append(nonAdjacent, match{i1, j1, k1})
 			}
 
 			i1, j1, k1 = i2, j2, k2
@@ -349,16 +308,17 @@ func (s *SequenceMatcher) getMatchingBlocks() []Match {
 	}
 
 	if k1 > 0 {
-		nonAdjacent = append(nonAdjacent, Match{i1, j1, k1})
+		nonAdjacent = append(nonAdjacent, match{i1, j1, k1})
 	}
 
-	nonAdjacent = append(nonAdjacent, Match{la, lb, 0})
+	nonAdjacent = append(nonAdjacent, match{la, lb, 0})
+
 	s.matchingBlocks = nonAdjacent
 
 	return s.matchingBlocks
 }
 
-func (s *SequenceMatcher) getOpcodes() []OpCode {
+func (s *sequenceMatcher) getOpcodes() []opCode {
 	if s.opCodes != nil {
 		return s.opCodes
 	}
@@ -366,28 +326,29 @@ func (s *SequenceMatcher) getOpcodes() []OpCode {
 	i, j := 0, 0
 	matching := s.getMatchingBlocks()
 
-	opCodes := make([]OpCode, 0, len(matching))
+	opCodes := make([]opCode, 0, len(matching))
 
 	for _, m := range matching {
 		ai, bj, size := m.A, m.B, m.Size
 		tag := byte(0)
 
-		if i < ai && j < bj {
+		switch {
+		case i < ai && j < bj:
 			tag = 'r'
-		} else if i < ai {
+		case i < ai:
 			tag = 'd'
-		} else if j < bj {
+		case j < bj:
 			tag = 'i'
 		}
 
 		if tag > 0 {
-			opCodes = append(opCodes, OpCode{tag, i, ai, j, bj})
+			opCodes = append(opCodes, opCode{tag, i, ai, j, bj})
 		}
 
 		i, j = ai+size, bj+size
 
 		if size > 0 {
-			opCodes = append(opCodes, OpCode{'e', ai, i, bj, j})
+			opCodes = append(opCodes, opCode{'e', ai, i, bj, j})
 		}
 	}
 
@@ -396,7 +357,7 @@ func (s *SequenceMatcher) getOpcodes() []OpCode {
 	return s.opCodes
 }
 
-func (s *SequenceMatcher) ratio() float64 {
+func (s *sequenceMatcher) ratio() float64 {
 	var la, lb int
 
 	if len(s.sequenceA) == 1 && len(s.sequenceB) == 1 {
@@ -413,10 +374,10 @@ func (s *SequenceMatcher) ratio() float64 {
 	return calculateRatio(matches, la+lb)
 }
 
-func (s *SequenceMatcher) quickRatio() float64 {
+func (s *sequenceMatcher) quickRatio() float64 {
 	var matches, la, lb int
 
-	if len(s.sequenceA) == 1 && len(s.sequenceB) == 1 {
+	if len(s.sequenceA) == 1 && len(s.sequenceB) == 1 { //nolint:nestif
 		seqA, seqB := s.sequenceA[0], s.sequenceB[0]
 		la, lb = len(seqA), len(seqB)
 
@@ -469,7 +430,7 @@ func (s *SequenceMatcher) quickRatio() float64 {
 	return calculateRatio(matches, la+lb)
 }
 
-func (s *SequenceMatcher) realQuickRatio() float64 {
+func (s *sequenceMatcher) realQuickRatio() float64 {
 	var la, lb int
 
 	// different than python because we must have slices of strings, so if slice is len 1
@@ -481,233 +442,4 @@ func (s *SequenceMatcher) realQuickRatio() float64 {
 	}
 
 	return calculateRatio(min(la, lb), la+lb)
-}
-
-type Differ struct{}
-
-func (d *Differ) fancyHelper(seqALo, seqAHi, seqBLo, seqBHi int, seqA, seqB []string) []string {
-	var g []string
-
-	if seqALo < seqAHi {
-		if seqBLo < seqBHi {
-			g = d.fancyReplace(seqALo, seqAHi, seqBLo, seqBHi, seqA, seqB)
-		} else {
-			g = d.dump("-", seqA, seqALo, seqAHi)
-		}
-	} else if seqBLo < seqBHi {
-		g = d.dump("+", seqB, seqBLo, seqBHi)
-	}
-
-	return g
-}
-
-func (d *Differ) dump(tag string, sequence []string, lo, hi int) []string {
-	var dumper []string
-
-	for i := lo; i < hi; i++ {
-		dumper = append(dumper, fmt.Sprintf("%s %s", tag, sequence[i]))
-	}
-
-	return dumper
-}
-
-func keepOriginalWs(s, tags string) string {
-	var strippedS string
-
-	var iterLen int
-
-	if len(s) > len(tags) {
-		iterLen = len(tags)
-	} else {
-		iterLen = len(s)
-	}
-
-	for i := 0; i < iterLen; i++ {
-		c, tagC := s[i], tags[i]
-
-		if string(tagC) == " " && unicode.IsSpace(rune(c)) {
-			strippedS += string(c)
-		} else {
-			strippedS += string(tagC)
-		}
-	}
-
-	return strings.TrimRight(strippedS, " ")
-}
-
-func (d *Differ) qFormat(aline, bline, atags, btags string) []string {
-	var f []string
-
-	atags = keepOriginalWs(aline, atags)
-	btags = keepOriginalWs(bline, btags)
-
-	f = append(f, fmt.Sprintf("- %s", aline))
-
-	if len(atags) > 0 {
-		f = append(f, fmt.Sprintf("? %s\n", atags))
-	}
-
-	f = append(f, fmt.Sprintf("+ %s", bline))
-
-	if len(btags) > 0 {
-		f = append(f, fmt.Sprintf("? %s\n", btags))
-	}
-
-	return f
-}
-
-func (d *Differ) plainReplace(seqALo, seqAHi, seqBLo, seqBHi int, seqA, seqB []string) []string {
-	var first []string
-
-	var second []string
-
-	if seqBHi-seqBLo < seqAHi-seqALo {
-		first = d.dump("+", seqB, seqBLo, seqBHi)
-		second = d.dump("-", seqA, seqALo, seqAHi)
-	} else {
-		first = d.dump("-", seqA, seqALo, seqAHi)
-		second = d.dump("+", seqB, seqBLo, seqBHi)
-	}
-
-	return append(first, second...)
-}
-
-func assembleFancyReplaceOutput(
-	preSyncPointDiffs, formattedTags, postSyncPointDiffs []string,
-) []string {
-	var finalOut []string
-
-	finalOut = append(finalOut, preSyncPointDiffs...)
-	finalOut = append(finalOut, formattedTags...)
-	finalOut = append(finalOut, postSyncPointDiffs...)
-
-	return finalOut
-}
-
-func (d *Differ) fancyReplace(seqALo, seqAHi, seqBLo, seqBHi int, seqA, seqB []string) []string {
-	bestRatio, cutoffRatio := 0.74, 0.75
-	eqi, eqj := -1, -1
-	bestI, bestJ := -1, -1
-
-	s := &SequenceMatcher{}
-
-	for j := seqBLo; j < seqBHi; j++ {
-		bj := seqB[j]
-
-		s.setSequenceB([]string{bj})
-
-		for i := seqALo; i < seqAHi; i++ {
-			ai := seqA[i]
-
-			if ai == bj {
-				if eqi == -1 {
-					eqi, eqj = i, j
-				}
-
-				continue
-			}
-
-			s.setSequenceA([]string{ai})
-
-			if s.realQuickRatio() > bestRatio && s.quickRatio() > bestRatio &&
-				s.ratio() > bestRatio {
-				bestRatio = s.ratio()
-				bestI, bestJ = i, j
-			}
-		}
-	}
-
-	if bestRatio < cutoffRatio {
-		if eqi == -1 {
-			replaced := d.plainReplace(seqALo, seqAHi, seqBLo, seqBHi, seqA, seqB)
-			return replaced
-		}
-
-		bestI, bestJ = eqi, eqj
-
-		// no idea why it thinks this is ineffectual? is it?!
-		bestRatio = 1.0 //nolint:ineffassign
-	} else {
-		eqi = -1
-	}
-
-	preSyncPointDiffs := d.fancyHelper(seqALo, bestI, seqBLo, bestJ, seqA, seqB)
-
-	aelt, belt := seqA[bestI], seqB[bestJ]
-
-	var formattedTags []string
-
-	if eqi == -1 {
-		atags, btags := "", ""
-
-		s.setSequences([]string{aelt}, []string{belt})
-
-		opCodes := s.getOpcodes()
-		for _, opCode := range opCodes {
-			la, lb := opCode.SeqAHi-opCode.SeqALo, opCode.SeqBHi-opCode.SeqBLo
-
-			switch opCode.Tag {
-			case replaceOp:
-				atags += strings.Repeat("^", la)
-				btags += strings.Repeat("^", lb)
-			case deleteOp:
-				atags += strings.Repeat("-", la)
-			case insertOp:
-				btags += strings.Repeat("+", lb)
-			case equalOp:
-				atags += strings.Repeat(" ", la)
-				btags += strings.Repeat(" ", lb)
-			default:
-				panic("unknown opcode, this shouldn't happen...")
-			}
-		}
-
-		formattedTags = d.qFormat(aelt, belt, atags, btags)
-	} else {
-		formattedTags = []string{fmt.Sprintf("  %s", aelt)}
-	}
-
-	postSyncPointDiffs := d.fancyHelper(seqALo+1, seqAHi, seqBLo+1, seqBHi, seqA, seqB)
-
-	return assembleFancyReplaceOutput(preSyncPointDiffs, formattedTags, postSyncPointDiffs)
-}
-
-func (d *Differ) Compare(seqA, seqB []string) []string {
-	s := &SequenceMatcher{}
-	s.setSequences(
-		seqA,
-		seqB,
-	)
-
-	opCodes := s.getOpcodes()
-
-	var finalOut []string
-
-	for _, opCode := range opCodes {
-		switch opCode.Tag {
-		case replaceOp:
-			c := d.fancyReplace(
-				opCode.SeqALo,
-				opCode.SeqAHi,
-				opCode.SeqBLo,
-				opCode.SeqBHi,
-				seqA,
-				seqB,
-			)
-			finalOut = append(finalOut, c...)
-		case deleteOp:
-			c := d.dump("-", seqA, opCode.SeqALo, opCode.SeqAHi)
-			finalOut = append(finalOut, c...)
-		case insertOp:
-			c := d.dump("+", seqB, opCode.SeqBLo, opCode.SeqBHi)
-			finalOut = append(finalOut, c...)
-		case equalOp:
-			c := d.dump(" ", seqA, opCode.SeqALo, opCode.SeqAHi)
-			finalOut = append(finalOut, c...)
-		default:
-			panic("unknown opcode, this shouldn't happen...")
-		}
-	}
-
-	return finalOut
 }
