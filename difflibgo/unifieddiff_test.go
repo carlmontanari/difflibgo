@@ -15,6 +15,20 @@ func TestUnifiedDiff(t *testing.T) {
 		expected string
 	}{
 		{
+			name: "empty-a-string",
+			a:    ``,
+			b:    `foo`,
+			expected: `- 
++ foo`,
+		},
+		{
+			name: "empty-b-string",
+			a:    `foo`,
+			b:    ``,
+			expected: `- foo
++ `,
+		},
+		{
 			name: "simple-no-diff",
 			a: `abc
 def

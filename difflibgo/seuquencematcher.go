@@ -136,6 +136,14 @@ func (s *sequenceMatcher) findLongestMatchSingleElement(seqALo, seqAHi, seqBLo, 
 
 	seqA, seqB := s.sequenceA[0], s.sequenceB[0]
 
+	if len(seqA) == 0 || len(seqB) == 0 {
+		return match{
+			A:    0,
+			B:    0,
+			Size: 0,
+		}
+	}
+
 	for i := seqALo; i != seqAHi; i++ {
 		newj2len := map[int]int{}
 
