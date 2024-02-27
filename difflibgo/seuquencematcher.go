@@ -130,13 +130,18 @@ func (s *sequenceMatcher) isBSeqJunk(seq string) bool {
 	return ok
 }
 
-func (s *sequenceMatcher) findLongestMatchSingleElement(seqALo, seqAHi, seqBLo, seqBHi int) match {
+func (s *sequenceMatcher) findLongestMatchSingleElement( //nolint:gocyclo
+	seqALo,
+	seqAHi,
+	seqBLo,
+	seqBHi int,
+) match {
 	besti, bestj, bestsize := seqALo, seqBLo, 0
 	j2len := map[int]int{}
 
 	seqA, seqB := s.sequenceA[0], s.sequenceB[0]
 
-	if len(seqA) == 0 || len(seqB) == 0 {
+	if seqA == "" || seqB == "" {
 		return match{
 			A:    0,
 			B:    0,
@@ -422,13 +427,17 @@ func (s *sequenceMatcher) quickRatio() float64 {
 		}
 
 		avail := map[string]int{}
+
 		matches = 0
+
 		for _, x := range s.sequenceA {
 			n, ok := avail[x]
 			if !ok {
 				n = s.fullBCount[x]
 			}
+
 			avail[x] = n - 1
+
 			if n > 0 {
 				matches++
 			}

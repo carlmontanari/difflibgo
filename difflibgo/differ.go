@@ -106,13 +106,13 @@ func (d *Differ) qFormat(aline, bline, atags, btags string) []string {
 
 	f = append(f, fmt.Sprintf("- %s", aline))
 
-	if len(atags) > 0 {
+	if atags != "" {
 		f = append(f, fmt.Sprintf("? %s\n", atags))
 	}
 
 	f = append(f, fmt.Sprintf("+ %s", bline))
 
-	if len(btags) > 0 {
+	if btags != "" {
 		f = append(f, fmt.Sprintf("? %s\n", btags))
 	}
 

@@ -119,6 +119,11 @@ issues:
         - revive
       text: "package-comments"
 
+    # prefer to sprintf -- feels more consistent overall
+    - linters:
+        - perfsprint
+      text: "can be replaced with string addition"
+
 run:
   go: '1.16'
   skip-dirs:
